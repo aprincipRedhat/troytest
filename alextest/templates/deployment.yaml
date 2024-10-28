@@ -1,9 +1,83 @@
-apiVersion: v1
-kind: ConfigMap
+apiVersion: apps/v1
+kind: Deployment
 metadata:
-  name: testing
-  namespace: default
   annotations:
-    k8s.v1.cni.cncf.io: {{`'[{"name":"vlan99","namespace":"default","ips":[`}}{{ .Values.ip }}{{`]}]'`}}  
-data:
-  k8s.v1.cni.cncf.io: {{`'[{"name":"vlan99","namespace":"default","ips":[`}}{{ .Values.ip }}{{`]}]'`}} 
+    argocd.argoproj.io/sync-wave:  "5"
+    openshift.io/scc: anyuid
+  name: plex-deploy
+  namespace: plextv
+  labels:
+    app: plextv
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: plextv
+  template:
+    metadata:
+      labels:
+        app: plextv
+      annotations:
+        k8s.v1.cni.cncf.io/networks: {{`'[{"name":"vlan99","namespace":"default","ips":[`}}{{ .Values.pubIP }}{{`]}]'`}}
+#        k8s.v1.cni.cncf.io/networks: '[{"name":"vlan99","namespace":"default","ips": ["192.168.99.48/24"]}]'
+#        k8s.v1.cni.cncf.io/networks: {{`'[{"name":"vlan99","namespace":"default","ips": ["`}}{{ .Values.pubIP }}{{`"]}]'`}}
+    spec:
+      serviceAccountName: plex-sa
+      containers:
+        - name: plextv
+          image: quay.looney.xyz/abheber/plex:latest
+          imagePullPolicy: Always
+          # resources:
+          #     limits:
+          #       cpu: 500m
+          #       memory: 1Gi
+          readinessProbe:
+            httpGet:
+              path: /identity
+              port: 32400
+              scheme: HTTP
+            initialDelaySeconds: 15
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /identity
+              port: 32400
+              scheme: HTTP
+            initialDelaySeconds: 10
+            timeoutSeconds: 10
+          ports:
+            - name: http
+              containerPort: 32400
+              protocol: TCP
+            - name: https
+              containerPort: 32443
+              protocol: TCP
+          env:
+            - name: TZ
+              value: "America/Denver"
+            - name: PLEX_CLAIM
+              value: claim-3-rxXAcyMAxGnzXBJBD8
+            - name: ALLOWED_NETWORKS #skip logins from trusted networks
+              value: 192.168.0.0/16,172.16.1.0/26
+          volumeMounts:
+            - name: plex-config
+              mountPath: /config
+            - name: plex-transcode
+              mountPath: /transcode
+            - name: plex-media
+              mountPath: /media
+      volumes:
+        - name: plex-config
+          persistentVolumeClaim:
+            claimName: pvc-plex-config
+        - name: plex-transcode
+          persistentVolumeClaim:
+            # claimName: pvc-plex-transcode
+          emptyDir:
+            medium: Memory
+            sizeLimit: 1Gi
+        - name: plex-media
+          persistentVolumeClaim:
+            claimName: pvc-plex-media
