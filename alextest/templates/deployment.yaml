@@ -4,4 +4,4 @@ metadata:
   name: testing
   namespace: default
 data:
-  k8s.v1.cni.cncf.io/networks: {{`'[{"name":"vlan99","namespace":"default","ips":[`}}{{ .Values.ip }}{{`]}]'`}}
+  k8s.v1.cni.cncf.io: {{`'[{"name":"vlan99","namespace":"default","ips":[`}}{{ .Values.ip }}{{`]}]'`}} 
