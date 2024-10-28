@@ -5,7 +5,7 @@ metadata:
     argocd.argoproj.io/sync-wave:  "5"
     openshift.io/scc: anyuid
   name: plex-deploy
-  namespace: plextv
+  namespace: default
   labels:
     app: plextv
 spec:
