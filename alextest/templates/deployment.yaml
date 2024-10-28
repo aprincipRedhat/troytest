@@ -3,5 +3,7 @@ kind: ConfigMap
 metadata:
   name: testing
   namespace: default
+  annotations:
+    k8s.v1.cni.cncf.io: {{`'[{"name":"vlan99","namespace":"default","ips":[`}}{{ .Values.ip }}{{`]}]'`}}  
 data:
   k8s.v1.cni.cncf.io: {{`'[{"name":"vlan99","namespace":"default","ips":[`}}{{ .Values.ip }}{{`]}]'`}} 
